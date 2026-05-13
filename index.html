@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Art Wiki - Open Source</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <style>
+        :root {
+            --bg: #f6f7f9; --card: #ffffff; --text: #1f2937;
+            --muted: #6b7280; --primary: #2563eb; --border: #e5e7eb; --bnb: #f3ba2f;
+        }
+        body.dark {
+            --bg: #0f172a; --card: #1e293b; --text: #e5e7eb;
+            --muted: #94a3b8; --border: #334155;
+        }
+        * { box-sizing: border-box; transition: 0.2s; }
+        body { margin: 0; font-family: 'Georgia', serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        
+        header { padding: 40px 20px; text-align: center; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; }
+        .container { max-width: 800px; margin: auto; padding: 20px; }
+        
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .donor-badge { background: var(--bnb); color: #000; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 10px; display: inline-block; }
+        
+        input, textarea, select { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; }
+        button { margin-top: 10px; padding: 10px 18px; border: none; border-radius: 6px; background: var(--primary); color: white; cursor: pointer; font-weight: 600; }
+        button.secondary { background: #64748b; }
+        button:hover { opacity: 0.85; }
+        .hidden { display: none; }
+        .wallet-box { background: rgba(243, 186, 47, 0.1); border: 1px dashed var(--bnb); padding: 15px; border-radius: 8px; word-break: break-all; margin-top: 10px; font-family: monospace; }
+        .preview { padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; min-height: 50px; background: rgba(0,0,0,0.02); }
+        
+        .donor-item { display: inline-block; background: var(--border); padding: 4px 12px; border-radius: 15px; font-size: 12px; margin: 4px; }
+        
+        footer { text-align: center; padding: 40px 20px; margin-top: 20px; border-top: 1px solid var(--border); }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🌍 World Art Wiki</h1>
+    <p>Open Source Digital Art Knowledge Base</p>
+</header>
+
+<div class="container">
+    <div align="center" style="margin-bottom: 30px;">
+        <a href="https://www.producthunt.com/posts/world-art-wiki" target="_blank" style="text-decoration: none; color: inherit;">
+            <img src="https://ph-files.imgix.net/6050e0ad-cfe5-47b1-b150-275313747604.png?auto=format&fit=crop&w=150&h=150" width="100" height="100" style="border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" />
+            <h2 style="margin: 10px 0 5px;">World Art Wiki</h2>
+            <p style="color: var(--primary); font-weight: bold;">Check it out on Product Hunt →</p>
+        </a>
+    </div>
+
+    <div class="card" id="donateBox">
+        <div class="donor-badge">Founding Members Program</div>
+        <h2 style="margin-top:0">🎨 Support & Join Closed Beta</h2>
+        <p>Support this Open Source project to get early access to the <b>Closed Beta</b>.</p>
+        <div class="wallet-box">
+            <strong>USDT (BEP-20):</strong><br>
+            <span id="addr">0x8862f47c645cc8426c063455e02283165b7d4802</span>
+            <br>
+            <button onclick="copyAddr()" style="background:var(--bnb); color:black;">📋 Copy Address</button>
+        </div>
+    </div>
+
+    <div class="card" id="authBox">
+        <h2>Login / Sign Up</h2>
+        <input id="username" placeholder="Username">
+        <input id="password" type="password" placeholder="Password (Beta Key)">
+        <button onclick="signup()">Sign Up</button>
+        <button onclick="login()" class="secondary">Login</button>
+        <p id="authMsg" style="color: #ef4444; font-size: 0.9rem;"></p>
+    </div>
+
+    <div id="mainApp" class="hidden">
+        <div class="card">
+            <h2>Settings & Search</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <select onchange="setTheme(this.value)">
+                    <option value="light">☀️ Light Mode</option>
+                    <option value="dark">🌙 Dark Mode</option>
+                </select>
+                <select id="format" onchange="updatePreview()">
+                    <option value="markdown">Markdown</option>
+                    <option value="wikitext">WikiText</option>
+                    <option value="html">HTML</option>
+                </select>
+            </div>
+            <input id="search" placeholder="🔍 Search articles..." onkeyup="searchArticle()">
+            <div id="results" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card">
+            <h2>Create Article</h2>
+            <input id="title" placeholder="Article Title">
+            <textarea id="content" rows="6" placeholder="Write content..." oninput="updatePreview()"></textarea>
+            <button onclick="saveArticle()">💾 Save Article</button>
+            <h4>Preview</h4>
+            <div class="preview" id="preview"></div>
+        </div>
+
+        <div class="card hidden" id="viewBox">
+            <h2 id="viewTitle"></h2>
+            <div id="viewContent"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🏛 Donor Wall</h3>
+        <div id="donorWall"><span class="donor-item">✨ Your Name Here</span></div>
+    </div>
+
+    <footer>
+      <div style="display: flex; align-items: center; gap: 10px; font-family: sans-serif; font-size: 14px;">
+    <span>Open Source under</span>
+    <a href="https://opensource.org/licenses/MIT" target="_blank">
+        <img src="https://img.shields.io/badge/License-MIT-2563eb.svg" alt="MIT License">
+    </a>
+</div>
+        <a class="copyrighted-badge" title="Copyrighted.com Registered &amp; Protected" target="_blank" href="https://app.copyrighted.com/work/CVCc7xYDmoDk92QY/">
+            <img alt="Copyrighted.com Registered &amp; Protected" border="0" width="125" height="75" srcset="https://static.copyrighted.com/badges/125x75/03_2x.png 2x" src="https://static.copyrighted.com/badges/125x75/03.png">
+        </a>
+        <script src="https://static.copyrighted.com/badges/helper.js"></script>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 10px;">© 2026 World Art Wiki. All Rights Reserved.</p>
+    </footer>
+</div>
+
+<script>
+let db, currentUser = null;
+// Initialize SQL
+initSqlJs({locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}`}).then(SQL => {
+    db = new SQL.Database();
+    db.run("CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT, password TEXT);");
+    db.run("CREATE TABLE articles(id INTEGER PRIMARY KEY, title TEXT, content TEXT, format TEXT, author TEXT);");
+});
+function copyAddr() {
+    navigator.clipboard.writeText(document.getElementById('addr').innerText);
+    alert("Address copied to clipboard!");
+}
+function signup() {
+    const u = document.getElementById('username').value, p = document.getElementById('password').value;
+    if(!u || !p) return alert("Please fill all fields");
+    db.run("INSERT INTO users(username, password) VALUES(?,?)", [u, p]);
+    document.getElementById('authMsg').textContent = "Account created! You can now login.";
+}
+function login() {
+    const u = document.getElementById('username').value, p = document.getElementById('password').value;
+    let res = db.exec("SELECT * FROM users WHERE username=? AND password=?", [u, p]);
+    if (res.length) {
+        currentUser = u;
+        document.getElementById('authBox').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+    } else {
+        document.getElementById('authMsg').textContent = "Invalid Credentials or Beta Key.";
+    }
+}
+function setTheme(t) { document.body.className = t; }
+function render(text, format) {
+    let t = text.replace(/\n/g, "<br>");
+    switch(format) {
+        case 'markdown':
+            return t.replace(/^# (.*$)/gim, "<h2>$1</h2>").replace(/\*\*(.*)\*\*/gim, "<b>$1</b>").replace(/\*(.*)\*/gim, "<i>$1</i>");
+        case 'wikitext':
+            return t.replace(/==(.+?)==/g, "<h3>$1</h3>").replace(/'''(.+?)'''/g, "<b>$1</b>").replace(/''(.+?)''/g, "<i>$1</i>");
+        default: return t;
+    }
+}
+function updatePreview() {
+    const content = document.getElementById('content').value;
+    const format = document.getElementById('format').value;
+    document.getElementById('preview').innerHTML = render(content, format);
+}
+function saveArticle() {
+    const t = document.getElementById('title').value, c = document.getElementById('content').value, f = document.getElementById('format').value;
+    if(!t || !c) return alert("Title and Content are required");
+    db.run("INSERT INTO articles(title, content, format, author) VALUES(?,?,?,?)", [t, c, f, currentUser]);
+    alert("Article saved successfully!");
+}
+function searchArticle() {
+    const q = document.getElementById('search').value;
+    const resDiv = document.getElementById('results');
+    resDiv.innerHTML = "";
+    if(!q) return;
+    let res = db.exec("SELECT id, title FROM articles WHERE title LIKE ?", [`%${q}%`]);
+    if(res.length) {
+        res[0].values.forEach(row => {
+            let d = document.createElement('div');
+            d.innerHTML = `• <a href="#" onclick="openArticle(${row[0]})">${row[1]}</a>`;
+            resDiv.appendChild(d);
+        });
+    } else {
+        resDiv.innerHTML = "<small>No articles found.</small>";
+    }
+}
+function openArticle(id) {
+    let res = db.exec("SELECT title, content, format FROM articles WHERE id=?", [id])[0].values[0];
+    document.getElementById('viewBox').classList.remove('hidden');
+    document.getElementById('viewTitle').textContent = res[0];
+    document.getElementById('viewContent').innerHTML = render(res[1], res[2]);
+    window.scrollTo(0, document.getElementById('viewBox').offsetTop);
+}
+</script>
+
+</body>
+</html>
